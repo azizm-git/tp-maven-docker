@@ -1,6 +1,8 @@
 node {
-    def registryProjet = 'localhost:5000/webapp-isoset'
-    def IMAGE = "${registryProjet}:version-${env.BUILD_ID}"
+    def registryLocal   = 'localhost:5000/webapp-isoset'
+    def registryDocHub  = 'azizmjd/webapp-isoset'
+    def registryGitlab  = 'registry.gitlab.com/azizm-git/aziz_gitlab/webapp-isoset'
+    def IMAGE = "${registryLocal}:version-${env.BUILD_ID}"
     def img
 
     stage('Clone') {
@@ -22,10 +24,26 @@ node {
         }
     }
 
-    stage('Push') {
+    stage('Push Local') {
         docker.withRegistry('http://localhost:5000') {
             img.push('latest')
             img.push()
+        }
+    }
+
+    stage('Push Docker Hub') {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+            sh "docker login -u $USER -p $PASS"
+            sh "docker tag ${IMAGE} ${registryDocHub}"
+            sh "docker push ${registryDocHub}"
+        }
+    }
+
+    stage('Push GitLab') {
+        withCredentials([usernamePassword(credentialsId: 'gitlab-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+            sh "docker login -u $USER -p $PASS registry.gitlab.com"
+            sh "docker tag ${IMAGE} ${registryGitlab}"
+            sh "docker push ${registryGitlab}"
         }
     }
 }
